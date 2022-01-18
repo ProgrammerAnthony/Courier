@@ -2,6 +2,7 @@ package com.courier.core.service;
 
 import com.courier.core.ExecutionEnum;
 import com.courier.core.ThreadEnum;
+import com.courier.core.mapper.TaskStoreMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -78,7 +79,7 @@ public class CourierTaskServiceImpl implements CourierTaskService{
     }
 
     @Override
-    public CourierTaskInstance getTaskByIdAndShardId(Long id, Long shardKey) {
+    public CourierTaskInstance getTaskById(Long id, Long shardKey) {
         return null;
     }
 

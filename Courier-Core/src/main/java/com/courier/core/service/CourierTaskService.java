@@ -18,7 +18,7 @@ public interface CourierTaskService {
 
     List<CourierTaskInstance> listUnfinishedTasks();
 
-    CourierTaskInstance getTaskByIdAndShardId(Long id, Long shardKey);
+    CourierTaskInstance getTaskById(Long id, Long shardKey);
 
     void submitTaskInstance(CourierTaskInstance courierTaskInstance);
 }

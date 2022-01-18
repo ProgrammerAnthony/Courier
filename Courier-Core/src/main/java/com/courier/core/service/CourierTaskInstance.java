@@ -87,10 +87,7 @@ public class CourierTaskInstance {
      * fallback error message
      */
     private String fallbackErrorMsg;
-    /**
-     * shard key
-     */
-    private Long shardKey;
+
 
     private Date gmtCreate;
 
