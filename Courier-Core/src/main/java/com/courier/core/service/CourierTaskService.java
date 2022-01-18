@@ -8,7 +8,7 @@ import java.util.List;
  * @desc
  */
 public interface CourierTaskService {
-    boolean initTask(CourierTaskInstance courierTaskInstance);
+    void initTask(CourierTaskInstance courierTaskInstance);
 
     void markTaskFail(CourierTaskInstance courierTaskInstance);
 

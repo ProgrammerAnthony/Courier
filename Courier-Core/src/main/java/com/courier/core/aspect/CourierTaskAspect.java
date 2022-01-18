@@ -2,6 +2,7 @@ package com.courier.core.aspect;
 
 import cn.hutool.json.JSONUtil;
 import com.courier.core.CourierTaskStatusEnum;
+import com.courier.core.ExecutionEnum;
 import com.courier.core.annotation.CourierTask;
 import com.courier.core.service.CourierTaskInstance;
 import com.courier.core.service.CourierTaskService;
@@ -71,6 +72,11 @@ public class CourierTaskAspect {
     }
 
     private Long getExecuteTime(CourierTaskInstance instance) {
-        return null;
+        if (ExecutionEnum.EXECUTE_SCHEDULE.getCode() == instance.getExecuteMode()) {
+            long delayTimeMillSecond = instance.getDelayTime() * 1000L;
+            return System.currentTimeMillis() + delayTimeMillSecond;
+        } else {
+            return System.currentTimeMillis();
+        }
     }
 }
