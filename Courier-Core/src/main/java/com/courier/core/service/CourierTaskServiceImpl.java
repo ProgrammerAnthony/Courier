@@ -59,6 +59,11 @@ public class CourierTaskServiceImpl implements CourierTaskService{
     }
 
     @Override
+    public int turnOnTask(CourierTaskInstance courierTaskInstance) {
+        return 0;
+    }
+
+    @Override
     public void markTaskFail(CourierTaskInstance courierTaskInstance) {
 
     }

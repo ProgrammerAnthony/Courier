@@ -8,11 +8,14 @@ import java.util.List;
  * @desc
  */
 public interface CourierTaskService {
+
     void initTask(CourierTaskInstance courierTaskInstance);
 
-    void markTaskFail(CourierTaskInstance courierTaskInstance);
+    int turnOnTask(CourierTaskInstance courierTaskInstance);
 
-    void markTaskSuccess(CourierTaskInstance courierTaskInstance);
+    int markTaskFail(CourierTaskInstance courierTaskInstance);
+
+    int markTaskSuccess(CourierTaskInstance courierTaskInstance);
 
     void markTaskFallbackFail(CourierTaskInstance courierTaskInstance);
 

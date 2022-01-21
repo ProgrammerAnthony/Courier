@@ -22,4 +22,8 @@ public class TaskScheduleManager {
 
     @Resource
     private TaskEngineExecutor taskEngineExecutor;
+
+    public void executeTask(CourierTaskInstance instance) {
+
+    }
 }
