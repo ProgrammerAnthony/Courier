@@ -32,6 +32,8 @@ public class ReflectUtils {
             put("java.lang.Char", char.class);
         }
     };
+    public static final String METHOD_SEPARATOR = ",";
+    public static final String CLAZZ_SEPARATOR = "#";
 
 
     public static Class<?>[] buildTypeClassArray(String[] parameterTypes) {
@@ -93,7 +95,7 @@ public class ReflectUtils {
         for (int i = 0; i < parameterTypes.length; i++) {
             parameterStrTypes.append(parameterTypes[i].getName());
             if (parameterTypes.length != (i + 1)) {
-                parameterStrTypes.append(",");
+                parameterStrTypes.append(METHOD_SEPARATOR);
             }
         }
         return parameterStrTypes.toString();
@@ -104,14 +106,14 @@ public class ReflectUtils {
         StringJoiner methodSignNameJoiner = new StringJoiner("", "", "");
         methodSignNameJoiner
                 .add(point.getTarget().getClass().getName())
-                .add("#")
+                .add(CLAZZ_SEPARATOR)
                 .add(point.getSignature().getName());
         methodSignNameJoiner.add("(");
         for (int i = 0; i < argsClazz.length; i++) {
             String className = argsClazz[i].getName();
             methodSignNameJoiner.add(className);
             if (argsClazz.length != (i + 1)) {
-                methodSignNameJoiner.add(",");
+                methodSignNameJoiner.add(METHOD_SEPARATOR);
             }
         }
         methodSignNameJoiner.add(")");

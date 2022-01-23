@@ -48,6 +48,7 @@ public class CourierTaskAspect {
                 .taskId(StringUtils.isEmpty(courierTask.id()) ? fullyQualifiedName : courierTask.id())
                 .methodName(point.getSignature().getName())
                 .parameterTypes(parameterTypes)
+                //add full qualified name to this instance
                 .methodSignName(fullyQualifiedName)
                 .taskParameter(JSONUtil.toJsonStr(point.getArgs()))
                 .executeMode(courierTask.executeMode().getCode())
