@@ -6,6 +6,7 @@ import com.courier.core.ExecutionEnum;
 import com.courier.core.annotation.CourierTask;
 import com.courier.core.service.CourierTaskInstance;
 import com.courier.core.service.CourierTaskService;
+import com.courier.core.utils.AopTaskInitPrevent;
 import com.courier.core.utils.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -31,7 +32,12 @@ public class CourierTaskAspect {
 
 
     @Around("@annotation(courierTask)")
-    public Object initCourierTask(ProceedingJoinPoint joinPoint, CourierTask courierTask) {
+    public Object initCourierTask(ProceedingJoinPoint joinPoint, CourierTask courierTask) throws Throwable {
+        log.info("access method:{} is called on {} args {}", joinPoint.getSignature().getName(), joinPoint.getThis(), joinPoint.getArgs());
+        if(AopTaskInitPrevent.shouldPrevent()){
+            return joinPoint.proceed();
+        }
+
         CourierTaskInstance courierTaskInstance = createCourierTaskInstance(joinPoint, courierTask);
         courierTaskService.initTask(courierTaskInstance);
         return null;
@@ -50,7 +56,9 @@ public class CourierTaskAspect {
                 .parameterTypes(parameterTypes)
                 //add full qualified name to this instance
                 .methodSignName(fullyQualifiedName)
+                //json serialization args
                 .taskParameter(JSONUtil.toJsonStr(point.getArgs()))
+                //now or later
                 .executeMode(courierTask.executeMode().getCode())
                 .threadMode(courierTask.threadMode().getCode())
                 .executeIntervalSec(courierTask.executeIntervalSec())
@@ -67,7 +75,6 @@ public class CourierTaskAspect {
                 .build();
 
         instance.setExecuteTime(getExecuteTime(instance));
-//        instance.setShardKey(tendConsistencyConfiguration.getTaskSharded() ? generateShardKey() : 0L);
 
         return instance;
     }
