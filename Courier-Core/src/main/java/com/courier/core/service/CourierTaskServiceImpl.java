@@ -49,7 +49,7 @@ public class CourierTaskServiceImpl implements CourierTaskService {
     @Override
     public void initTask(CourierTaskInstance courierTaskInstance) {
         Long result = taskStoreMapper.initTask(courierTaskInstance);
-        log.info("[Courier] init task result [{}]", result > 0);
+        log.info("[Courier Consistency] init task result [{}]", result > 0);
 
         if (ExecutionEnum.EXECUTE_NOW.getCode() != courierTaskInstance.getExecuteMode()) {
             return;

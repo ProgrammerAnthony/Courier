@@ -3,17 +3,23 @@ package com.courier.core.service;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.json.JSONUtil;
 import com.courier.core.config.CourierConsistencyConfig;
+import com.courier.core.custom.CourierFrameworkAlerter;
+import com.courier.core.exception.CourierException;
+import com.courier.core.utils.ExpressionUtils;
 import com.courier.core.utils.ReflectUtils;
 import com.courier.core.utils.SpringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
+import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -43,21 +49,21 @@ public class TaskEngineExecutorService implements TaskEngineExecutor {
             //task start mark
             int result = courierTaskService.turnOnTask(instance);
             if (result <= 0) {
-                log.warn("task started，exit. task:{}", JSONUtil.toJsonStr(instance));
+                log.warn("[Courier Consistency]task started，exit. task:{}", JSONUtil.toJsonStr(instance));
                 return;
             }
             instance = courierTaskService.getTaskById(instance.getId(), 0L);
             taskScheduleManager.executeTask(instance);
             //task succeed mark
             int success = courierTaskService.markTaskSuccess(instance);
-            log.info("task succeed and result is:{}", success);
+            log.info("[Courier Consistency]task succeed and result is:{}", success);
         } catch (Exception e) {
-            log.error("task instance :{} failed with error:", JSONUtil.toJsonStr(instance), e);
+            log.error("[Courier Consistency]task instance :{} failed with error:", JSONUtil.toJsonStr(instance), e);
             instance.setErrorMsg(getErrorMsg(e));
             instance.setExecuteTime(getNextExecutionTime(instance));
             //task fail mark
             int failResult = courierTaskService.markTaskFail(instance);
-            log.info("task failed with result:{},next execute time:{}", failResult > 0, instance.getExecuteTime());
+            log.info("[Courier Consistency]task failed with result:{},next execute time:{}", failResult > 0, instance.getExecuteTime());
             fallbackTaskInstance(instance);
         }
     }
@@ -100,7 +106,7 @@ public class TaskEngineExecutorService implements TaskEngineExecutor {
         if (instance.getExecuteTimes() <= courierConsistencyConfig.getFailCountThreshold()) {
             return;
         }
-        log.info("execute fallback of instanceId: {}}...", instance.getId());
+        log.info("[Courier Consistency]execute fallback of instanceId: {}}...", instance.getId());
         Class<?> fallbackClass = ReflectUtils.getClassByName(instance.getFallbackClassName());
         if (ObjectUtils.isEmpty(fallbackClass)) {
             return;
@@ -119,12 +125,12 @@ public class TaskEngineExecutorService implements TaskEngineExecutor {
             fallbackMethod.invoke(fallbackClassBean, paramValues);
             int successResult = courierTaskService.markTaskSuccess(instance);
 
-            log.info("task fallback succeed with result [{}]", successResult > 0);
+            log.info("[Courier Consistency]task fallback succeed with result [{}]", successResult > 0);
         } catch (Exception e) {
             parseExpressionAndDoAlert(instance);
             instance.setFallbackErrorMsg(getErrorMsg(e));
             int failResult = courierTaskService.markTaskFail(instance);
-            log.error("task fallback fail with result: [{}] next schedule time [{} - {}]", failResult > 0,
+            log.error("[Courier Consistency]task fallback fail with result: [{}] next schedule time [{} - {}]", failResult > 0,
                     instance.getExecuteTime(), getFormatTime(instance.getExecuteTime()), e);
         }
     }
@@ -142,24 +148,62 @@ public class TaskEngineExecutorService implements TaskEngineExecutor {
 
             alertNoticePool.submit(() -> {
                 String expr = rewriteExpr(instance.getAlertExpression());
-                String exprResult = readExpr(expr, ExpressionUtils.buildDataMap(instance));
+                String exprResult = ExpressionUtils.readExpr(expr, ExpressionUtils.buildDataMap(instance));
                 doAlert(exprResult, instance);
             });
         } catch (Exception e) {
-            log.error("send alert with error", e);
+            log.error("[Courier Consistency]send alert with error", e);
         }
     }
 
-    private String readExpr(String expr, Object buildDataMap) {
-        return null;
-    }
+
 
     private void doAlert(String exprResult, CourierTaskInstance instance) {
+        if (StringUtils.isEmpty(exprResult)) {
+            return;
+        }
+        if (!ExpressionUtils.RESULT_FLAG.equals(exprResult)) {
+            return;
+        }
+        log.warn("[Courier Consistency]Alert instance id: {}, task:{}", instance.getId(), JSONUtil.toJsonPrettyStr(instance));
+        if (StringUtils.isEmpty(instance.getAlertActionBeanName())) {
+            return;
+        }
+        sendAlertNotice(instance);
+    }
 
+    private void sendAlertNotice(CourierTaskInstance courierTaskInstance) {
+        Map<String, CourierFrameworkAlerter> beansOfTypeMap = SpringUtils.getBeansOfType(CourierFrameworkAlerter.class);
+
+        if (CollectionUtils.isEmpty(beansOfTypeMap)) {
+            log.warn("[Courier Consistency]send alert failed because of lack CourierFrameworkAlerter implementation...");
+            return;
+        }
+
+        try {
+            // get CourierFrameworkAlerter implementation
+            getCourierFrameworkAlerterImpl(beansOfTypeMap, courierTaskInstance)
+                    .sendAlertNotice(courierTaskInstance);
+        } catch (Exception e) {
+            log.error("[Courier Consistency]send alert fail with error", e);
+            throw new CourierException(e);
+        }
+    }
+
+    private CourierFrameworkAlerter getCourierFrameworkAlerterImpl(Map<String, CourierFrameworkAlerter> beansOfTypeMap, CourierTaskInstance courierTaskInstance) {
+        if (beansOfTypeMap.size() == 1) {
+            String[] beanNamesForType = SpringUtils.getBeanNamesForType(CourierFrameworkAlerter.class);
+            return (CourierFrameworkAlerter) SpringUtils.getBean(beanNamesForType[0]);
+        }
+
+        return beansOfTypeMap.get(courierTaskInstance.getAlertActionBeanName());
     }
 
     private String rewriteExpr(String alertExpression) {
-        return null;
+        String exprExpr = StringUtils.replace(alertExpression, "executeTimes", "#taskInstance.executeTimes");
+        StringJoiner exprJoiner = new StringJoiner("", "${", "}");
+        exprJoiner.add(exprExpr);
+        return exprJoiner.toString();
     }
 
     private String getFormatTime(long timestamp) {

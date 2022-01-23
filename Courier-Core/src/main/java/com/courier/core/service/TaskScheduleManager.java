@@ -58,7 +58,7 @@ public class TaskScheduleManager {
             targetMethod.invoke(bean, args);
             AopTaskInitPrevent.setPrevent(false);
         } catch (InvocationTargetException e) {
-            log.error("load target method error", e);
+            log.error("[Courier Consistency]load target method error", e);
             Throwable target = e.getTargetException();
             throw new CourierException((Exception) target);
         } catch (Exception ex) {
@@ -72,7 +72,7 @@ public class TaskScheduleManager {
             clazz = Class.forName(className);
             return clazz;
         } catch (ClassNotFoundException e) {
-            log.error("load target class error", e);
+            log.error("[Courier Consistency]load target class error", e);
             e.printStackTrace();
             return null;
         }
@@ -91,7 +91,7 @@ public class TaskScheduleManager {
         try {
             return clazz.getMethod(methodName, parameterTypeClassArray);
         } catch (NoSuchMethodException e) {
-            log.error("load target method error", e);
+            log.error("[Courier Consistency]load target method error", e);
             return null;
         }
     }
